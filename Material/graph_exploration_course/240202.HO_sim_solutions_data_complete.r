@@ -277,41 +277,60 @@ write.csv(subset(dplyr::select(trans_sd_err,ID,TIME=time,SPEC,DOSE_MGKG,ROUTE,CM
                  CMPD=="mAb"&ROUTE==1&SPEC%in%c("Rat","Monkey")),
           file="./HO/Step3/mab_trans_pk_iv_sd.csv", row.names = FALSE, quote = FALSE)
 
+# Step 0: Load the data --------------------------------
+
+trans_sd_err <- read.csv("../datasets/nlds_trans_sd_pk.csv")
+trans_md_err <- read.csv("../datasets/nlds_trans_md_pk.csv")
+
 # Step 1-2-3: SD PK - NCA ------------------------------
 
-d_conc <- subset(trans_sd_err) %>% dplyr::select(Time=time,conc=C1_Y,Subject=ID,Dose=DOSE_MG)
-d_dose <- subset(d_conc,!duplicated(Subject)) %>% mutate(Time=0,conc=0)
+d_conc <- trans_sd_err
+d_dose <-
+  trans_sd_err %>%
+  dplyr::filter(AMT != 0)
 my_start_time <- 0
-d_conc <- rbind(d_conc,mutate(d_dose,Time=my_start_time,conc=0)) %>% arrange(Subject,Time)
+
 head(d_conc)
 
-conc_obj <-PKNCAconc(d_conc,conc~Time|Subject)
-dose_obj <-PKNCAdose(d_dose,Dose~Time|Subject)
+conc_obj <-PKNCAconc(d_conc, DV~TIME|ROUTE+DGRP+ID)
+dose_obj <-PKNCAdose(d_dose, AMT~TIME|ID)
 
 PKNCA.options() # look here what options to set on in intervals_manual, but could also change default here
 # to reset
 # PKNCA.options(default=TRUE)
 
-intervals_manual  <-
-  data.frame(start=my_start_time, end=c(48, Inf),
-             cmax=c(FALSE, TRUE),
-             tmax=c(FALSE, TRUE),
-             auclast=c(TRUE, FALSE),
-             aucinf.obs=FALSE,
-             aucinf.pred=c(FALSE, TRUE),
-             cl.pred=c(FALSE, TRUE),
-             vd.pred=c(FALSE, TRUE),
-             vss.pred=c(FALSE, TRUE),
-             aumcinf.pred=c(FALSE,TRUE))
+intervals_manual <-
+  data.frame(
+    start=0, end=c(48, Inf),
+    cmax=c(FALSE, TRUE),
+    tmax=c(FALSE, TRUE),
+    auclast=c(TRUE, FALSE),
+    aucinf.obs=FALSE,
+    aucinf.pred=c(FALSE, TRUE),
+    cl.pred=c(FALSE, TRUE),
+    vd.pred=c(FALSE, TRUE),
+    vss.pred=c(FALSE, TRUE),
+    aumcinf.pred=c(FALSE,TRUE),
+    half.life = c(FALSE, TRUE)
+  )
 
-data_obj <- PKNCAdata(conc_obj, dose_obj, intervals= intervals_manual)
+data_obj <- PKNCAdata(conc_obj, dose_obj, intervals = intervals_manual)
 results_obj <- pk.nca(data_obj)
 
-nca_sd_trans_long <- results_obj$result %>%
+summary(results_obj)
+
+covariates <-
+  trans_sd_err %>%
+  dplyr::filter(TIME == 0) %>%
+  dplyr::select(ID, CMPD, SPEC, BW, ROUTE, DGRP, ADA)
+
+nca_sd_trans_long <-
+  results_obj %>%
+  as.data.frame() |>
   subset(!PPTESTCD%in%c("span.ratio","r.squared")) %>%
   mutate(Parameter = ifelse(end=="Inf",PPTESTCD,paste0(PPTESTCD,"_0h_",end,"h"))) %>%
-  dplyr::select(ID=Subject, Parameter ,Value=PPORRES) %>%
-  dplyr::left_join(dplyr::select(subset(trans_sd_err,!duplicated(ID)),ID,CMPD,SPEC,BW,ROUTE,NDOS,DOSE_MGKG,ADA))
+  dplyr::select(ID, Parameter, Value=PPORRES) %>%
+  dplyr::left_join(covariates)
 
 nca_sd_trans <- nca_sd_trans_long %>% tidyr::spread(key=Parameter, value=Value)
 head(nca_sd_trans)
