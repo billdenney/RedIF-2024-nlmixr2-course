@@ -111,15 +111,16 @@ nrep        <- nrow(s_df)
 
 # eta generation
 samp_shell <- data.frame(ID= 1:(nid*nrep), SCEN = rep(1:nrep,nid), REP = rep(1:nid,each=nrep))
-set.seed(1) ; eta1 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var1))
-set.seed(2) ; eta2 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var2))
-set.seed(3) ; eta3 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var3))
-set.seed(4) ; eta4 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var4))
-set.seed(5) ; eta5 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var5))
-set.seed(6) ; eta6 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var6))
+set.seed(1)
+eta1 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var1))
+eta2 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var2))
+eta3 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var3))
+eta4 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var4))
+eta5 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var5))
+eta6 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var6))
 samp_ETA <-  mutate(samp_shell,ETA1=eta1,ETA2=eta2,ETA3=eta3,ETA4=eta4,ETA5=eta5,ETA6=eta6)
 
-set.seed(10) ; adadraw <- runif(nrow(samp_ETA))
+adadraw <- runif(nrow(samp_ETA))
 samp <- dplyr::left_join(samp_ETA,s_df,by="SCEN") %>%
   mutate(ADADRAW=adadraw,ADA=ifelse(CMPD==1&SPEC==2&ADADRAW<prob_monkey_ada,1,ifelse(CMPD==1&SPEC%in%c(3,4)&ADADRAW<prob_rodent_ada,1,0)))
 
@@ -166,10 +167,11 @@ outsel0 <- subset(outsel,time==0) %>%
 outsel <- dplyr::left_join(outsel,outsel0)
 
 # Add error
-set.seed(10) ; p_err_cplasma <- rnorm(n = nrow(outsel), mean = 0, sd = sd_cplasma_prp_err)
-set.seed(20) ; p_err_cbrain <- rnorm(n = nrow(outsel), mean = 0, sd = sd_cbrain_prp_err)
-set.seed(30) ; p_err_eff <- rnorm(n = nrow(outsel), mean = 0, sd = sd_eff_prp_err)
-set.seed(40) ; p_err_saf <- rnorm(n = nrow(outsel), mean = 0, sd = sd_saf_prp_err)
+set.seed(10)
+p_err_cplasma <- rnorm(n = nrow(outsel), mean = 0, sd = sd_cplasma_prp_err)
+p_err_cbrain <- rnorm(n = nrow(outsel), mean = 0, sd = sd_cbrain_prp_err)
+p_err_eff <- rnorm(n = nrow(outsel), mean = 0, sd = sd_eff_prp_err)
+p_err_saf <- rnorm(n = nrow(outsel), mean = 0, sd = sd_saf_prp_err)
 
 outsel_err <- mutate(outsel,
                      C1_ERR = p_err_cplasma, C1_Y_ORI = C1*(1+C1_ERR), C1_BQL = ifelse(C1_Y_ORI<lloq_cplasma,1,0), C1_Y = ifelse(C1_BQL==1,0,C1_Y_ORI),
@@ -671,15 +673,16 @@ nrep        <- nrow(s_df)
 
 # eta generation
 samp_shell <- data.frame(ID= 1:(nid*nrep), SCEN = rep(1:nrep,nid), REP = rep(1:nid,each=nrep))
-set.seed(1) ; eta1 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var1))
-set.seed(2) ; eta2 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var2))
-set.seed(3) ; eta3 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var3))
-set.seed(4) ; eta4 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var4))
-set.seed(5) ; eta5 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var5))
-set.seed(6) ; eta6 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var6))
+set.seed(1)
+eta1 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var1))
+eta2 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var2))
+eta3 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var3))
+eta4 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var4))
+eta5 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var5))
+eta6 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var6))
 samp_ETA <-  mutate(samp_shell,ETA1=eta1,ETA2=eta2,ETA3=eta3,ETA4=eta4,ETA5=eta5,ETA6=eta6)
 
-set.seed(10) ; adadraw <- runif(nrow(samp_ETA))
+adadraw <- runif(nrow(samp_ETA))
 samp <- dplyr::left_join(samp_ETA,s_df,by="SCEN") %>%
   mutate(ADADRAW=adadraw,ADA=ifelse(CMPD==1&SPEC==2&ADADRAW<prob_monkey_ada,1,ifelse(CMPD==1&SPEC%in%c(3,4)&ADADRAW<prob_rodent_ada,1,0)))
 
@@ -846,16 +849,17 @@ nrep        <- nrow(s_df)
 
 # eta generation: set to 0 for Typical sim
 samp_shell <- data.frame(ID= 1:(nid*nrep), SCEN = rep(1:nrep,nid), REP = rep(1:nid,each=nrep))
-set.seed(1) ; eta1 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var1))
-set.seed(2) ; eta2 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var2))
-set.seed(3) ; eta3 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var3))
-set.seed(4) ; eta4 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var4))
-set.seed(5) ; eta5 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var5))
-set.seed(6) ; eta6 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var6))
+set.seed(1)
+eta1 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var1))
+eta2 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var2))
+eta3 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var3))
+eta4 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var4))
+eta5 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var5))
+eta6 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var6))
 # samp_ETA <-  mutate(samp_shell,ETA1=eta1,ETA2=eta2,ETA3=eta3,ETA4=eta4,ETA5=eta5,ETA6=eta6)
 samp_ETA <-  mutate(samp_shell,ETA1=0,ETA2=0,ETA3=0,ETA4=0,ETA5=0,ETA6=0)
 
-set.seed(10) ; adadraw <- runif(nrow(samp_ETA))
+adadraw <- runif(nrow(samp_ETA))
 samp <- dplyr::left_join(samp_ETA,s_df,by="SCEN") %>%
   # mutate(ADADRAW=adadraw,ADA=ifelse(CMPD==1&SPEC==2&ADADRAW<prob_monkey_ada,1,ifelse(CMPD==1&SPEC%in%c(3,4)&ADADRAW<prob_rodent_ada,1,0)))
   mutate(ADADRAW=1,ADA=ifelse(CMPD==1&SPEC==2&ADADRAW<prob_monkey_ada,1,ifelse(CMPD==1&SPEC%in%c(3,4)&ADADRAW<prob_rodent_ada,1,0)))
@@ -979,16 +983,17 @@ nrep        <- nrow(s_df)
 
 # eta generation: set to 0 for Typical sim
 samp_shell <- data.frame(ID= 1:(nid*nrep), SCEN = rep(1:nrep,nid), REP = rep(1:nid,each=nrep))
-set.seed(1) ; eta1 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var1))
-set.seed(2) ; eta2 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var2))
-set.seed(3) ; eta3 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var3))
-set.seed(4) ; eta4 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var4))
-set.seed(5) ; eta5 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var5))
-set.seed(6) ; eta6 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var6))
+set.seed(1)
+eta1 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var1))
+eta2 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var2))
+eta3 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var3))
+eta4 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var4))
+eta5 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var5))
+eta6 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var6))
 # samp_ETA <-  mutate(samp_shell,ETA1=eta1,ETA2=eta2,ETA3=eta3,ETA4=eta4,ETA5=eta5,ETA6=eta6)
 samp_ETA <-  mutate(samp_shell,ETA1=0,ETA2=0,ETA3=0,ETA4=0,ETA5=0,ETA6=0)
 
-set.seed(10) ; adadraw <- runif(nrow(samp_ETA))
+adadraw <- runif(nrow(samp_ETA))
 samp <- dplyr::left_join(samp_ETA,s_df,by="SCEN") %>%
   # mutate(ADADRAW=adadraw,ADA=ifelse(CMPD==1&SPEC==2&ADADRAW<prob_monkey_ada,1,ifelse(CMPD==1&SPEC%in%c(3,4)&ADADRAW<prob_rodent_ada,1,0)))
   mutate(ADADRAW=1,ADA=ifelse(CMPD==1&SPEC==2&ADADRAW<prob_monkey_ada,1,ifelse(CMPD==1&SPEC%in%c(3,4)&ADADRAW<prob_rodent_ada,1,0)))
