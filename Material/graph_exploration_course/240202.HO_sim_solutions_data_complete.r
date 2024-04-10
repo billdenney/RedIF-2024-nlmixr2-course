@@ -39,7 +39,7 @@ source("Translation_PKPD.r")
 nid <- 10
 prob_monkey_ada <- 0.1
 prob_rodent_ada <- 0.5
-ada_onset <- 3*24 
+ada_onset <- 3*24
 
 # Fictive Safety and Efficacy Turnover
 # Note: I call kout TV, because in the model I'll scale with body weight (-0.25), not for Kin (choice at this point)
@@ -111,15 +111,16 @@ nrep        <- nrow(s_df)
 
 # eta generation
 samp_shell <- data.frame(ID= 1:(nid*nrep), SCEN = rep(1:nrep,nid), REP = rep(1:nid,each=nrep))
-set.seed(1) ; eta1 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var1))
-set.seed(2) ; eta2 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var2))
-set.seed(3) ; eta3 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var3))
-set.seed(4) ; eta4 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var4))
-set.seed(5) ; eta5 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var5))
-set.seed(6) ; eta6 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var6))
+set.seed(1)
+eta1 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var1))
+eta2 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var2))
+eta3 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var3))
+eta4 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var4))
+eta5 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var5))
+eta6 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var6))
 samp_ETA <-  mutate(samp_shell,ETA1=eta1,ETA2=eta2,ETA3=eta3,ETA4=eta4,ETA5=eta5,ETA6=eta6)
 
-set.seed(10) ; adadraw <- runif(nrow(samp_ETA))
+adadraw <- runif(nrow(samp_ETA))
 samp <- dplyr::left_join(samp_ETA,s_df,by="SCEN") %>%
   mutate(ADADRAW=adadraw,ADA=ifelse(CMPD==1&SPEC==2&ADADRAW<prob_monkey_ada,1,ifelse(CMPD==1&SPEC%in%c(3,4)&ADADRAW<prob_rodent_ada,1,0)))
 
@@ -146,7 +147,7 @@ out <- lapply(1:nrow(samp), function(x){
                                                         value=samp[x,]$DOSE_MG * samp[x,]$TVF,
                                                         tau=samp[x,]$II,
                                                         ndose=samp[x,]$NDOS)
-  
+
   times  <- sort(c(0.083,0.25,0.5,1,2,seq(0,2*7*24,4)))
   data.frame(deSolve::lsoda(inits,times,des_func,parm,events=list(data=evnt)),
              ID=unlist(samp[x,])[["ID"]]
@@ -154,7 +155,7 @@ out <- lapply(1:nrow(samp), function(x){
 })
 out <- do.call(rbind,out)
 
-outsel <- dplyr::select(out,time,C1,AUC=A4,CB,SAFETY=A7,EFFICACY=A8,ID) %>% 
+outsel <- dplyr::select(out,time,C1,AUC=A4,CB,SAFETY=A7,EFFICACY=A8,ID) %>%
   dplyr::left_join(dplyr::select(samp,ID:REP,SPEC:CMPD,BW,DOSE_MG,ADA),by="ID") %>%
   mutate(SPEC=ifelse(SPEC==1,"Human",ifelse(SPEC==2,"Monkey",ifelse(SPEC==3,"Rat",ifelse(SPEC==4,"Mouse","ERROR")))),
          CMPD=as.factor(ifelse(CMPD==1,"mAb","SM")))
@@ -166,16 +167,17 @@ outsel0 <- subset(outsel,time==0) %>%
 outsel <- dplyr::left_join(outsel,outsel0)
 
 # Add error
-set.seed(10) ; p_err_cplasma <- rnorm(n = nrow(outsel), mean = 0, sd = sd_cplasma_prp_err)
-set.seed(20) ; p_err_cbrain <- rnorm(n = nrow(outsel), mean = 0, sd = sd_cbrain_prp_err)
-set.seed(30) ; p_err_eff <- rnorm(n = nrow(outsel), mean = 0, sd = sd_eff_prp_err)
-set.seed(40) ; p_err_saf <- rnorm(n = nrow(outsel), mean = 0, sd = sd_saf_prp_err)
+set.seed(10)
+p_err_cplasma <- rnorm(n = nrow(outsel), mean = 0, sd = sd_cplasma_prp_err)
+p_err_cbrain <- rnorm(n = nrow(outsel), mean = 0, sd = sd_cbrain_prp_err)
+p_err_eff <- rnorm(n = nrow(outsel), mean = 0, sd = sd_eff_prp_err)
+p_err_saf <- rnorm(n = nrow(outsel), mean = 0, sd = sd_saf_prp_err)
 
 outsel_err <- mutate(outsel,
                      C1_ERR = p_err_cplasma, C1_Y_ORI = C1*(1+C1_ERR), C1_BQL = ifelse(C1_Y_ORI<lloq_cplasma,1,0), C1_Y = ifelse(C1_BQL==1,0,C1_Y_ORI),
                      CB_ERR = p_err_cbrain, CB_Y_ORI = CB*(1+CB_ERR), CB_BQL = ifelse(CB_Y_ORI<lloq_cbrain,1,0), CB_Y = ifelse(CB_BQL==1,0,CB_Y_ORI),
                      EFF_ERR = p_err_eff, EFF_Y_ORI = EFFICACY*(1+EFF_ERR), EFF_BQL = ifelse(EFF_Y_ORI<lloq_eff,1,0), EFF_Y = ifelse(EFF_BQL==1,0,EFF_Y_ORI),
-                     SAF_ERR = p_err_saf, SAF_Y_ORI = SAFETY*(1+SAF_ERR), SAF_BQL = ifelse(SAF_Y_ORI<lloq_saf,1,0), SAF_Y = ifelse(SAF_BQL==1,0,SAF_Y_ORI)) 
+                     SAF_ERR = p_err_saf, SAF_Y_ORI = SAFETY*(1+SAF_ERR), SAF_BQL = ifelse(SAF_Y_ORI<lloq_saf,1,0), SAF_Y = ifelse(SAF_BQL==1,0,SAF_Y_ORI))
 
 write.csv(outsel_err, file=paste0("outsel_err","_n",nid,".csv"), row.names = FALSE, quote = FALSE, na = ".")
 
@@ -260,19 +262,19 @@ trans_sdc2_err <- read.csv("outsel_err_n10.csv") %>%
 trans_sd_err <- rbind(trans_sdc1_err,trans_sdc2_err)
 
 write.csv(subset(dplyr::select(trans_sd_err,ID,TIME=time,SPEC,DOSE_MGKG,ROUTE,CMPD,BW,ADA,Cplasma=C1_Y,BQL=C1_BQL),
-                 CMPD=="SM"&SPEC=="Rat"&ROUTE==1), 
+                 CMPD=="SM"&SPEC=="Rat"&ROUTE==1),
           file="./HO/Step1/sm_rat_pk_iv_sd.csv", row.names = FALSE, quote = FALSE)
 
 write.csv(subset(dplyr::select(trans_sd_err,ID,TIME=time,SPEC,DOSE_MGKG,ROUTE,CMPD,BW,ADA,Cplasma=C1_Y,BQL=C1_BQL),
-                 CMPD=="SM"&ROUTE==1), 
+                 CMPD=="SM"&ROUTE==1),
           file="./HO/Step1/sm_trans_pk_iv_sd.csv", row.names = FALSE, quote = FALSE)
 
 write.csv(subset(dplyr::select(trans_sd_err,ID,TIME=time,SPEC,DOSE_MGKG,ROUTE,CMPD,BW,ADA,Cplasma=C1_Y,BQL=C1_BQL),
-                 CMPD=="SM"&SPEC=="Rat"), 
+                 CMPD=="SM"&SPEC=="Rat"),
           file="./HO/Step2/sm_rat_pk_ivpo_sd.csv", row.names = FALSE, quote = FALSE)
 
 write.csv(subset(dplyr::select(trans_sd_err,ID,TIME=time,SPEC,DOSE_MGKG,ROUTE,CMPD,BW,ADA,Cplasma=C1_Y,BQL=C1_BQL),
-                 CMPD=="mAb"&ROUTE==1&SPEC%in%c("Rat","Monkey")), 
+                 CMPD=="mAb"&ROUTE==1&SPEC%in%c("Rat","Monkey")),
           file="./HO/Step3/mab_trans_pk_iv_sd.csv", row.names = FALSE, quote = FALSE)
 
 # Step 1-2-3: SD PK - NCA ------------------------------
@@ -287,7 +289,7 @@ conc_obj <-PKNCAconc(d_conc,conc~Time|Subject)
 dose_obj <-PKNCAdose(d_dose,Dose~Time|Subject)
 
 PKNCA.options() # look here what options to set on in intervals_manual, but could also change default here
-# to reset 
+# to reset
 # PKNCA.options(default=TRUE)
 
 intervals_manual  <-
@@ -305,7 +307,7 @@ intervals_manual  <-
 data_obj <- PKNCAdata(conc_obj, dose_obj, intervals= intervals_manual)
 results_obj <- pk.nca(data_obj)
 
-nca_sd_trans_long <- results_obj$result %>% 
+nca_sd_trans_long <- results_obj$result %>%
   subset(!PPTESTCD%in%c("span.ratio","r.squared")) %>%
   mutate(Parameter = ifelse(end=="Inf",PPTESTCD,paste0(PPTESTCD,"_0h_",end,"h"))) %>%
   dplyr::select(ID=Subject, Parameter ,Value=PPORRES) %>%
@@ -316,16 +318,16 @@ head(nca_sd_trans)
 
 # Careful: depending on input of NCA, can be too sparse, will create NA's, which will make the input a character
 
-write.csv(subset(nca_sd_trans,CMPD=="SM"&SPEC=="Rat"&ROUTE==1), 
+write.csv(subset(nca_sd_trans,CMPD=="SM"&SPEC=="Rat"&ROUTE==1),
           file="./HO/Step1/sm_rat_nca_iv_sd.csv", row.names = FALSE, quote = FALSE)
 
-write.csv(subset(nca_sd_trans,CMPD=="SM"&ROUTE==1), 
+write.csv(subset(nca_sd_trans,CMPD=="SM"&ROUTE==1),
           file="./HO/Step1/sm_trans_nca_iv_sd.csv", row.names = FALSE, quote = FALSE)
 
-write.csv(subset(nca_sd_trans,CMPD=="SM"&SPEC=="Rat"), 
+write.csv(subset(nca_sd_trans,CMPD=="SM"&SPEC=="Rat"),
           file="./HO/Step2/sm_rat_nca_ivpo_sd.csv", row.names = FALSE, quote = FALSE)
 
-write.csv(subset(nca_sd_trans,CMPD=="mAb"&ROUTE==1&SPEC%in%c("Rat","Monkey")), 
+write.csv(subset(nca_sd_trans,CMPD=="mAb"&ROUTE==1&SPEC%in%c("Rat","Monkey")),
           file="./HO/Step3/mab_trans_nca_iv_sd.csv", row.names = FALSE, quote = FALSE)
 
 # Step 1: Results - Learn allometry and dose linearity based on linear model ---------------------------------------------------------
@@ -516,7 +518,7 @@ trans_pkpd_q2d_saf <- dplyr::left_join(trans_pkpd_q2d_saf,dplyr::select(subset(t
 trans_pkpd_q2d_long <- rbind(trans_pkpd_q2d_c1,trans_pkpd_q2d_cb,trans_pkpd_q2d_eff,trans_pkpd_q2d_saf) %>%
   dplyr::left_join(dplyr::select(subset(trans_pkpd_q2d_err,!duplicated(ID)),ID,SPEC,DOSE_MGKG,ROUTE,CMPD,BW,ADA))
 
-trans_pkpd_q2d_wide <- subset(trans_pkpd_q2d_long,BQL==0) %>% 
+trans_pkpd_q2d_wide <- subset(trans_pkpd_q2d_long,BQL==0) %>%
   mutate(BQL=NULL,BSL=NULL) %>%
   tidyr::spread(key=TYPE, value=DV)
 
@@ -652,15 +654,16 @@ nrep        <- nrow(s_df)
 
 # eta generation
 samp_shell <- data.frame(ID= 1:(nid*nrep), SCEN = rep(1:nrep,nid), REP = rep(1:nid,each=nrep))
-set.seed(1) ; eta1 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var1))
-set.seed(2) ; eta2 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var2))
-set.seed(3) ; eta3 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var3))
-set.seed(4) ; eta4 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var4))
-set.seed(5) ; eta5 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var5))
-set.seed(6) ; eta6 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var6))
+set.seed(1)
+eta1 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var1))
+eta2 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var2))
+eta3 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var3))
+eta4 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var4))
+eta5 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var5))
+eta6 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var6))
 samp_ETA <-  mutate(samp_shell,ETA1=eta1,ETA2=eta2,ETA3=eta3,ETA4=eta4,ETA5=eta5,ETA6=eta6)
 
-set.seed(10) ; adadraw <- runif(nrow(samp_ETA))
+adadraw <- runif(nrow(samp_ETA))
 samp <- dplyr::left_join(samp_ETA,s_df,by="SCEN") %>%
   mutate(ADADRAW=adadraw,ADA=ifelse(CMPD==1&SPEC==2&ADADRAW<prob_monkey_ada,1,ifelse(CMPD==1&SPEC%in%c(3,4)&ADADRAW<prob_rodent_ada,1,0)))
 
@@ -687,7 +690,7 @@ out <- lapply(1:nrow(samp), function(x){
                                                         value=samp[x,]$DOSE_MG * samp[x,]$TVF,
                                                         tau=samp[x,]$II,
                                                         ndose=samp[x,]$NDOS)
-  
+
   times  <- sort(c(1,seq(0,4*7*24,6)))
   data.frame(deSolve::lsoda(inits,times,des_func,parm,events=list(data=evnt)),
              ID=unlist(samp[x,])[["ID"]]
@@ -695,7 +698,7 @@ out <- lapply(1:nrow(samp), function(x){
 })
 out <- do.call(rbind,out)
 
-outsel_human <- dplyr::select(out,time,C1,AUC=A4,CB,SAFETY=A7,EFFICACY=A8,ID) %>% 
+outsel_human <- dplyr::select(out,time,C1,AUC=A4,CB,SAFETY=A7,EFFICACY=A8,ID) %>%
   dplyr::left_join(dplyr::select(samp,ID:REP,SPEC:CMPD,BW,DOSE_MG,ADA),by="ID") %>%
   mutate(SPEC=ifelse(SPEC==1,"Human",ifelse(SPEC==2,"Monkey",ifelse(SPEC==3,"Rat",ifelse(SPEC==4,"Mouse","ERROR")))),
          CMPD=as.factor(ifelse(CMPD==1,"mAb","SM")))
@@ -704,15 +707,15 @@ outsel_human0 <- subset(outsel_human,time==0) %>%
   mutate(SAFETY0 = SAFETY, EFFICACY0 = EFFICACY) %>%
   dplyr::select(ID,SAFETY0,EFFICACY0)
 
-outsel_human <- dplyr::left_join(outsel_human,outsel_human0) %>% 
+outsel_human <- dplyr::left_join(outsel_human,outsel_human0) %>%
   mutate(EFF_CHG = 100 * (EFFICACY-EFFICACY0)/EFFICACY0,
          SAF_CHG = 100 * (SAFETY-SAFETY0)/SAFETY0)
 
 write.csv(outsel_human, file=paste0("outsel_human","_n",nid,".csv"), row.names = FALSE, quote = FALSE, na = ".")
 
-sum_human <- outsel_human %>% 
-  group_by(CMPD,DOSE_MGKG,time) %>% 
-  dplyr::summarise(N=length(C1), 
+sum_human <- outsel_human %>%
+  group_by(CMPD,DOSE_MGKG,time) %>%
+  dplyr::summarise(N=length(C1),
                    C1_05 = quantile(C1,probs=c(0.05)),
                    C1_50 = quantile(C1,probs=c(0.5)),
                    C1_95 = quantile(C1,probs=c(0.95)),
@@ -827,16 +830,17 @@ nrep        <- nrow(s_df)
 
 # eta generation: set to 0 for Typical sim
 samp_shell <- data.frame(ID= 1:(nid*nrep), SCEN = rep(1:nrep,nid), REP = rep(1:nid,each=nrep))
-set.seed(1) ; eta1 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var1))
-set.seed(2) ; eta2 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var2))
-set.seed(3) ; eta3 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var3))
-set.seed(4) ; eta4 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var4))
-set.seed(5) ; eta5 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var5))
-set.seed(6) ; eta6 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var6))
+set.seed(1)
+eta1 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var1))
+eta2 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var2))
+eta3 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var3))
+eta4 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var4))
+eta5 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var5))
+eta6 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var6))
 # samp_ETA <-  mutate(samp_shell,ETA1=eta1,ETA2=eta2,ETA3=eta3,ETA4=eta4,ETA5=eta5,ETA6=eta6)
 samp_ETA <-  mutate(samp_shell,ETA1=0,ETA2=0,ETA3=0,ETA4=0,ETA5=0,ETA6=0)
 
-set.seed(10) ; adadraw <- runif(nrow(samp_ETA))
+adadraw <- runif(nrow(samp_ETA))
 samp <- dplyr::left_join(samp_ETA,s_df,by="SCEN") %>%
   # mutate(ADADRAW=adadraw,ADA=ifelse(CMPD==1&SPEC==2&ADADRAW<prob_monkey_ada,1,ifelse(CMPD==1&SPEC%in%c(3,4)&ADADRAW<prob_rodent_ada,1,0)))
   mutate(ADADRAW=1,ADA=ifelse(CMPD==1&SPEC==2&ADADRAW<prob_monkey_ada,1,ifelse(CMPD==1&SPEC%in%c(3,4)&ADADRAW<prob_rodent_ada,1,0)))
@@ -864,17 +868,17 @@ out <- lapply(1:nrow(samp), function(x){
                                                         value=samp[x,]$DOSE_MG * samp[x,]$TVF,
                                                         tau=samp[x,]$II,
                                                         ndose=samp[x,]$NDOS)
-  
+
   times  <- sort(c(1,seq(0,29*7*24,1)))
   # times  <- c(0,1*7*24,27*7*24,28*7*24)
-  
+
   data.frame(deSolve::lsoda(inits,times,des_func,parm,events=list(data=evnt)),
              ID=unlist(samp[x,])[["ID"]]
   )
 })
 out <- do.call(rbind,out)
 
-outsel_noael <- dplyr::select(out,time,C1,AUC=A4,CB,SAFETY=A7,EFFICACY=A8,ID) %>% 
+outsel_noael <- dplyr::select(out,time,C1,AUC=A4,CB,SAFETY=A7,EFFICACY=A8,ID) %>%
   dplyr::left_join(dplyr::select(samp,ID:REP,SPEC:CMPD,BW,DOSE_MG,ADA),by="ID") %>%
   mutate(SPEC=ifelse(SPEC==1,"Human",ifelse(SPEC==2,"Monkey",ifelse(SPEC==3,"Rat",ifelse(SPEC==4,"Mouse","ERROR")))),
          CMPD=as.factor(ifelse(CMPD==1,"mAb","SM")))
@@ -960,16 +964,17 @@ nrep        <- nrow(s_df)
 
 # eta generation: set to 0 for Typical sim
 samp_shell <- data.frame(ID= 1:(nid*nrep), SCEN = rep(1:nrep,nid), REP = rep(1:nid,each=nrep))
-set.seed(1) ; eta1 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var1))
-set.seed(2) ; eta2 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var2))
-set.seed(3) ; eta3 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var3))
-set.seed(4) ; eta4 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var4))
-set.seed(5) ; eta5 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var5))
-set.seed(6) ; eta6 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var6))
+set.seed(1)
+eta1 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var1))
+eta2 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var2))
+eta3 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var3))
+eta4 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var4))
+eta5 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var5))
+eta6 <- rnorm(n=nrow(samp_shell),mean=0,sd=sqrt(var6))
 # samp_ETA <-  mutate(samp_shell,ETA1=eta1,ETA2=eta2,ETA3=eta3,ETA4=eta4,ETA5=eta5,ETA6=eta6)
 samp_ETA <-  mutate(samp_shell,ETA1=0,ETA2=0,ETA3=0,ETA4=0,ETA5=0,ETA6=0)
 
-set.seed(10) ; adadraw <- runif(nrow(samp_ETA))
+adadraw <- runif(nrow(samp_ETA))
 samp <- dplyr::left_join(samp_ETA,s_df,by="SCEN") %>%
   # mutate(ADADRAW=adadraw,ADA=ifelse(CMPD==1&SPEC==2&ADADRAW<prob_monkey_ada,1,ifelse(CMPD==1&SPEC%in%c(3,4)&ADADRAW<prob_rodent_ada,1,0)))
   mutate(ADADRAW=1,ADA=ifelse(CMPD==1&SPEC==2&ADADRAW<prob_monkey_ada,1,ifelse(CMPD==1&SPEC%in%c(3,4)&ADADRAW<prob_rodent_ada,1,0)))
@@ -997,17 +1002,17 @@ out <- lapply(1:nrow(samp), function(x){
                                                         value=samp[x,]$DOSE_MG * samp[x,]$TVF,
                                                         tau=samp[x,]$II,
                                                         ndose=samp[x,]$NDOS)
-  
+
   # times  <- sort(c(1,seq(0,29*7*24,1)))
   times  <- c(0,1*7*24,27*7*24,28*7*24)
-  
+
   data.frame(deSolve::lsoda(inits,times,des_func,parm,events=list(data=evnt)),
              ID=unlist(samp[x,])[["ID"]]
   )
 })
 out <- do.call(rbind,out)
 
-outsel_hed <- dplyr::select(out,time,C1,AUC=A4,CB,SAFETY=A7,EFFICACY=A8,ID) %>% 
+outsel_hed <- dplyr::select(out,time,C1,AUC=A4,CB,SAFETY=A7,EFFICACY=A8,ID) %>%
   dplyr::left_join(dplyr::select(samp,ID:REP,SPEC:CMPD,BW,DOSE_MG,ADA),by="ID") %>%
   mutate(SPEC=ifelse(SPEC==1,"Human",ifelse(SPEC==2,"Monkey",ifelse(SPEC==3,"Rat",ifelse(SPEC==4,"Mouse","ERROR")))),
          CMPD=as.factor(ifelse(CMPD==1,"mAb","SM")))
@@ -1018,7 +1023,7 @@ outsel_hed_ss <- dplyr::left_join(outsel_hed_ss_start,outsel_hed_ss_end,by="ID")
 
 pl_hed_sd <- ggplot(data=subset(outsel_hed,NDOS==1&time==28*24*7&DOSE_MGKG<15))+
     geom_line(aes(x=DOSE_MGKG,y=AUC))+
-    geom_hline(yintercept = auc_noael_sd/10,lty=2) + 
+    geom_hline(yintercept = auc_noael_sd/10,lty=2) +
     geom_vline(xintercept = 10.9,lty=2) +
     scale_x_continuous(breaks=seq(0,100,1))+
     labs(x="Dose (mg/kg)",y="AUC (h*?g/mL)",subtitle="mAb: Human vs NOAEL AUCinf,sd")+
@@ -1026,7 +1031,7 @@ pl_hed_sd <- ggplot(data=subset(outsel_hed,NDOS==1&time==28*24*7&DOSE_MGKG<15))+
 
 pl_hed_w1 <- ggplot(data=subset(outsel_hed,NDOS!=1&time==1*24*7&DOSE_MGKG<15))+
   geom_line(aes(x=DOSE_MGKG,y=AUC))+
-  geom_hline(yintercept = auc_noael_w1/10,lty=2) + 
+  geom_hline(yintercept = auc_noael_w1/10,lty=2) +
   geom_vline(xintercept = 8.8,lty=2) +
   scale_x_continuous(breaks=seq(0,100,1))+
   labs(x="Dose (mg/kg)",y="AUC (h*?g/mL)",subtitle="mAb: Human vs NOAEL AUC0-7d")+
@@ -1034,7 +1039,7 @@ pl_hed_w1 <- ggplot(data=subset(outsel_hed,NDOS!=1&time==1*24*7&DOSE_MGKG<15))+
 
 pl_hed_ss <- ggplot(data=subset(outsel_hed_ss,DOSE_MGKG<15))+
   geom_line(aes(x=DOSE_MGKG,y=AUCSS))+
-  geom_hline(yintercept = auc_noael_ss/10,lty=2) + 
+  geom_hline(yintercept = auc_noael_ss/10,lty=2) +
   geom_vline(xintercept = 7.2,lty=2) +
   scale_x_continuous(breaks=seq(0,100,1))+
   labs(x="Dose (mg/kg)",y="AUC (h*?g/mL)",subtitle="mAb: Human vs NOAEL AUCss,qw")+
@@ -1072,10 +1077,10 @@ head(nmds_sd_pk)
 nmds_sd_pk <- dplyr::select(trans_sd_err,ID,TIME=time,DV=C1_Y,FLAG=C1_BQL,DOSE_MGKG,ROUTE,CMPD,BW,ADA) %>%
   mutate(CMPD=ifelse(CMPD=="mAb",1,2),CMT=2,EVID=0,LDV=ifelse(DV==0,log(0.05)/2,log(DV)),AMT=0)
 
-nmds_sd_drec <- subset(nmds_sd_pk,!duplicated(ID)) %>% 
+nmds_sd_drec <- subset(nmds_sd_pk,!duplicated(ID)) %>%
   mutate(TIME=0,DV=0,FLAG=0,CMT=ifelse(ROUTE==1,2,1),EVID=1,LDV=0,AMT=DOSE_MGKG*BW)
 
-nmds_sd <- rbind(nmds_sd_pk,nmds_sd_drec) %>% 
+nmds_sd <- rbind(nmds_sd_pk,nmds_sd_drec) %>%
   dplyr::select(ID,EVID,AMT,TIME,DV,LDV,CMT,FLAG,DOSE_MGKG:ADA) %>%
   mutate(SPEC=ifelse(BW==3,2,ifelse(BW==0.3,3,ifelse(BW==0.02,4,1))))
 
@@ -1099,13 +1104,13 @@ nmds_pkpd_mut <- read.csv("trans_pkpd_q2d_long.csv") %>%
                            ifelse(TYPE=="Cbrain",4,5))),
          FLAG=ifelse(DV==0,1,0))
 
-nmds_pkpd_drec <- subset(nmds_pkpd_mut,!duplicated(ID)) %>% 
+nmds_pkpd_drec <- subset(nmds_pkpd_mut,!duplicated(ID)) %>%
   mutate(TIME=0,DV=0,FLAG=0,TYPE=1,CMT=ifelse(ROUTE==1,2,1),EVID=1,LDV=0,LDV2=0,AMT=DOSE_MGKG*BW)
 
 nmds_pkpd_safbsl <- subset(nmds_pkpd_mut,CMT==3) %>% subset(!duplicated(ID)) %>% dplyr::select(ID,SAFBSL = BSL)
 nmds_pkpd_effbsl <- subset(nmds_pkpd_mut,CMT==5) %>% subset(!duplicated(ID)) %>% dplyr::select(ID,EFFBSL = BSL)
 
-nmds_pkpd <- rbind(nmds_pkpd_mut,nmds_pkpd_drec) %>% 
+nmds_pkpd <- rbind(nmds_pkpd_mut,nmds_pkpd_drec) %>%
   dplyr::select(ID,EVID,AMT,TIME,DV,LDV,LDV2,CMT,TYPE,FLAG,DOSE_MGKG:ADA) %>%
   mutate(SPEC=ifelse(BW==3,2,ifelse(BW==0.3,3,ifelse(BW==0.02,4,1)))) %>%
   dplyr::left_join(nmds_pkpd_safbsl) %>%
@@ -1151,7 +1156,7 @@ write.csv(nmds_pkpd,"../../EXPL.ANALYSIS/PKPD/nmds_pkpd.csv", row.names = FALSE,
 
 # Maak dan ook een typical sim om te tonen hoe het model werkt (en dan naar mens + IIV band)
 
-# Dit kan meteen in een interne case study gegoten worden 
+# Dit kan meteen in een interne case study gegoten worden
 # (wel KP verhaal naar iets anders omdat dit lijkt op preclin DD course)
 # Kunnen we mensen exploratie app laten gebruiken zonder te mogen fitten -> dat is kern van die case dan
 # Idee: wat als de groepjes me dan 1x mogen een study design kunnen geven ->
